@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap");
+
+body {
+    font-family: "inter", sans-serif;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    background-color: #1f1f1f;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+}
+
+.scrollbar-hide {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;     /* Firefox */
+}
+
+/* === RESPONSIVE GLOBAL ZOOM === */
+
+/* Default (Desktop) */
+body {
+  zoom: 0.85;
+}
+
+/* Tablet */
+@media (max-width: 1024px) {
+  body {
+    zoom: 1;
+  }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  body {
+    zoom: 1;
+  }
+}
