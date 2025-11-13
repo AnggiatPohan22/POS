@@ -65,7 +65,7 @@ const cartSlices = createSlice({
         },
 
         clearCart: (state) => {
-            return [];
+            state.length = 0;
         }
     }
 });
@@ -83,6 +83,7 @@ export const getItemQuantity = (state, itemId) => {
 };
 
 export const getCartItems = (state) => state.cart;
+
 
 // ✅ Export semua actions
 export const { 

@@ -83,23 +83,7 @@ const CartInfo = () => {
                 ))}   
             </div>
             
-            {/* Cart Summary */}
-            {cartData.length > 0 && (
-                <div className="mt-4 p-3 bg-[#1f1f1f] rounded-lg">
-                    <div className="flex justify-between text-sm">
-                        <span className="text-[#ababab]">Total Items:</span>
-                        <span className="text-white">
-                            {cartData.reduce((total, item) => total + item.quantity, 0)}
-                        </span>
-                    </div>
-                    <div className="flex justify-between text-sm mt-1">
-                        <span className="text-[#ababab]">Subtotal:</span>
-                        <span className="text-[#f6b100] font-bold">
-                            {formatIDR(cartData.reduce((total, item) => total + (item.price * item.quantity), 0))}
-                        </span>
-                    </div>
-                </div>
-            )}
+            
         </div>
     );
 };

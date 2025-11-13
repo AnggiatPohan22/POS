@@ -3,6 +3,8 @@ import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { FaLongArrowAltRight } from 'react-icons/fa';
 import { getAvatarName } from '../../utils';
+import { updateTable } from "../../redux/slices/tableSlices";
+
 
 
 const TableCards = ({key, name, status, initials, seat}) => {
