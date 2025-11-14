@@ -17,6 +17,12 @@ export const login = async (reqData) => {
     return response;
 };
 
+//function to update table status
+export const updateTableStatus = async (tableId, status) => {
+  const res = await axios.patch(`/api/tables/${tableId}`, { status });
+  return res.data;
+};
+
 // API Endpoints
 export const register = (data) => api.post("/api/user/register", data);
 export const getUserData = () => api.get("/api/user");

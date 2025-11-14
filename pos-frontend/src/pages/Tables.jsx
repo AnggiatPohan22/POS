@@ -41,14 +41,51 @@ const Tables = () => {
     (a, b) => Number(a.tableNo) - Number(b.tableNo)
   );
 
-  // ✅ Filter Table (All / Booked)
+  // ---------------- CONFIRM ORDER ONLY ----------------
+const handleConfirmOrder = async () => {
+  if (!validateData()) return;
+  if (!user?._id) return enqueueSnackbar("Login required!", { variant: "warning" });
+
+  try {
+    setIsLoading(true);
+
+    const result = await createOrder({
+      customer,
+      cartData,
+      total,
+      tax,
+      totalWithTax,
+      tableId: selectedTable?.id,
+      status: "PENDING",
+    });
+
+    if (!result.success) {
+      enqueueSnackbar("Failed to process order", { variant: "error" });
+      return;
+    }
+
+    setPendingOrderId(result.data._id);
+    setPaymentModalOpen(true);
+
+    enqueueSnackbar("Order created! Select payment method", { variant: "info" });
+
+  } catch (err) {
+    console.error(err);
+    enqueueSnackbar("System error!", { variant: "error" });
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+
+  // ✅ Filter Table (All / DINE-IN)
   const filteredTables =
-    status === "booked"
-      ? sortedTables.filter((t) => t.status === "Booked")
+    status === "Dine-in"
+      ? sortedTables.filter((t) => t.currentOrder) // 🔥 Dine-in kalau ada order aktif
       : sortedTables;
 
   return (
-    <section className="bg-[#1f1f1f] h-[calc(100vh-5rem)] overflow-hidden">
+    <section className="bg-[#1f1f1f] h-[calc(100vh)] overflow-hidden">
       <div className="flex items-center justify-between px-10 py-2">
         <div className="flex items-center gap-4">
           <BackButton />
@@ -66,17 +103,17 @@ const Tables = () => {
           </button>
 
           <button
-            onClick={() => setStatus("booked")}
+            onClick={() => setStatus("Dine-in")}
             className={`text-[#ababab] text-lg px-5 py-2 rounded-lg ${
-              status === "booked" ? "bg-[#383838]" : ""
+              status === "Dine-in" ? "bg-[#383838]" : ""
             }`}
           >
-            Booked
+            Dine-in
           </button>
         </div>
       </div>
 
-      <div className="flex flex-wrap justify-center gap-4 px-10">
+      <div className="flex flex-wrap justify-center gap-4 px-10 mt-8 ">
         {filteredTables.map((table) => (
           <TableCards
             key={table._id}

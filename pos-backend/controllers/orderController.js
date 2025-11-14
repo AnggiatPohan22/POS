@@ -1,13 +1,11 @@
 import mongoose from "mongoose";
 import Order from "../models/orderModel.js";
+import Table from "../models/tableModel.js";
 import createHttpError from "http-errors";
 
 const addOrder = async (req, res, next) => {
     try {
         console.log("🔍 FULL REQUEST BODY:", req.body);
-        console.log("🔍 Customer Name from frontend:", req.body.customerName);
-        console.log("🔍 Customer Phone from frontend:", req.body.customerPhone);
-        console.log("🔍 Guests from frontend:", req.body.guests);
 
         const { 
             customerName, 
@@ -21,23 +19,21 @@ const addOrder = async (req, res, next) => {
             orderType 
         } = req.body;
 
-        // ✅ VALIDATE - pastikan data customer ada
+        // VALIDATION
         if (!customerName || !customerPhone) {
-            console.log("❌ Missing customer data!");
-            const error = createHttpError(400, "Customer name and phone are required!");
-            return next(error);
+            return next(createHttpError(400, "Customer name and phone are required!"));
         }
 
-        // ✅ CREATE ORDER dengan data dari frontend
+        // CREATE ORDER
         const order = new Order({
             customerDetails: {
-                name: customerName,       // ← Pastikan ini dari input form
-                phone: customerPhone,     // ← Pastikan ini dari input form
+                name: customerName,
+                phone: customerPhone,
                 guests: parseInt(guests)
             },
             bills: {
                 total: total || 0,
-                tax: tax || 0, 
+                tax: tax || 0,
                 totalWithTax: totalWithTax || 0
             },
             items: items || [],
@@ -46,41 +42,52 @@ const addOrder = async (req, res, next) => {
         });
 
         await order.save();
-        
-        console.log("✅ Order saved with customer:", order.customerDetails.name);
-        console.log("✅ Full order data:", order);
-        
-        res.status(201).json({ 
-            success: true, 
-            message: "Order created!", 
-            data: order 
+
+        // 🟩 UPDATE TABLE → Dine-in + set currentOrder
+        if (table) {
+            await Table.findByIdAndUpdate(
+                table,
+                { 
+                    status: "Dine-in",
+                    currentOrder: order._id
+                },
+                { new: true }
+            );
+
+            console.log(`🟢 Table ${table} marked as DINE-IN with order ${order._id}`);
+        }
+
+        res.status(201).json({
+            success: true,
+            message: "Order created!",
+            data: order
         });
     } catch (error) {
         console.error("❌ Order creation error:", error);
         next(error);
     }
-}
+};
+
 
 const getOrderById = async (req, res, next) => {
     try {
         const { id } = req.params;
 
         if (!mongoose.Types.ObjectId.isValid(id)) {
-            const error = createHttpError(404, "Invalid Id!");
-            return next(error);
+            return next(createHttpError(404, "Invalid Id!"));
         }
 
         const order = await Order.findById(id);
-        if (!order) {
-            const error = createHttpError(404, "Order not found!");
-            return next(error);
-        }
+
+        if (!order) return next(createHttpError(404, "Order not found!"));
 
         res.status(200).json({ success: true, data: order });
+
     } catch (error) {
         next(error);
     }
-}
+};
+
 
 const getOrders = async (req, res, next) => {
     try {
@@ -89,7 +96,8 @@ const getOrders = async (req, res, next) => {
     } catch (error) {
         next(error);
     }
-}
+};
+
 
 const updateOrder = async (req, res, next) => {
     try {
@@ -97,8 +105,7 @@ const updateOrder = async (req, res, next) => {
         const { id } = req.params;
 
         if (!mongoose.Types.ObjectId.isValid(id)) {
-            const error = createHttpError(404, "Invalid Id!");
-            return next(error);
+            return next(createHttpError(404, "Invalid Id!"));
         }
 
         const order = await Order.findByIdAndUpdate(
@@ -107,16 +114,29 @@ const updateOrder = async (req, res, next) => {
             { new: true }
         );
 
-        if (!order) {
-            const error = createHttpError(404, "Order not found!");
-            return next(error);
+        if (!order) return next(createHttpError(404, "Order not found!"));
+
+        // 🟩 Jika order selesai → bebaskan meja
+        if (["completed", "cancelled", "PAID"].includes(orderStatus) && order.table) {
+            await Table.findByIdAndUpdate(
+                order.table,
+                { 
+                    status: "Available",
+                    currentOrder: null 
+                },
+                { new: true }
+            );
+
+            console.log(`🟡 Table ${order.table} set back to AVAILABLE`);
         }
 
         res.status(200).json({ success: true, message: "Order Updated!", data: order });
+
     } catch (error) {
         next(error);
     }
-}
+};
+
 
 // Export ES6
 export { addOrder, getOrderById, getOrders, updateOrder };
