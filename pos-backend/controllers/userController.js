@@ -64,11 +64,11 @@ const login = async (req, res, next) => {
             expiresIn : '1d'
         });
 
-        res.cookie('accessToken', accessToken, {
+        res.cookie('access_token', accessToken, {
             maxAge: 1000 * 60 * 60 * 24 * 30,
             httpOnly: true,
-            sameSite: 'none',
-            secure: true
+            sameSite: 'lax',
+            secure: false 
         })
 
         res.status(200).json({success: true, message: "User Login Successfully!", 
@@ -96,10 +96,10 @@ const getUserData = async(req, res, next) => {
 const logout = async (req, res, next) => {
   try {
     // hapus cookie token
-    res.clearCookie("accessToken", {
+    res.clearCookie("access_token", {
       httpOnly: true,
-      sameSite: "none",
-      secure: true,
+      sameSite: "lax", // jika deploy ke https, ubah ke 'none'
+      secure: false, // jika deploy di https, ubah ke true
       path: "/", // pastikan sesuai dengan path waktu set cookie
     });
 

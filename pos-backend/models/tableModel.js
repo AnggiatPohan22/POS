@@ -10,7 +10,14 @@ const tableSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
+    outlet:{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Outlet",
+        required: true
+    },
     currentOrder: {type: mongoose.Schema.Types.ObjectId, ref: "Order"}
 });
+
+
 
 module.exports = mongoose.model("Table", tableSchema);

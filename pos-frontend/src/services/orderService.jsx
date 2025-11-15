@@ -1,44 +1,42 @@
 // src/services/orderService.jsx
-export const createOrder = async ({
-  customer,
-  cartData,
-  total,
-  tax,
-  totalWithTax,
-  tableId,
-  status,
-}) => {
+import axios from "axios";
+import store from "../redux/store";
+
+// Create Order
+export const createOrder = async (payload) => {
+  console.log("🚀 CreateOrder Payload:", payload);
   try {
-    const body = {
-      customerName: customer.name,
-      customerPhone: customer.phone || "0000000000",
-      guests: parseInt(customer.guests, 10) || 1,
-      orderType: customer.orderType || "Dine-In",
-
-      items: cartData.map(item => ({
-        name: item.name,
-        price: item.price,
-        quantity: item.quantity,
-      })),
-
-      total,
-      tax,
-      totalWithTax,
-
-      table: tableId || null,
-      orderStatus: status, // PENDING / PAID
-    };
-
     const res = await fetch("http://localhost:8000/api/order", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify(body),
+      body: JSON.stringify(payload),
     });
 
-    return res.json();
+    return await res.json();
   } catch (error) {
     console.error("❌ createOrder Frontend Error:", error);
     return { success: false, message: "Create order failed" };
   }
 };
+
+
+// Update Order Status (PAID / COMPLETED / dll)
+export const updateOrderStatus = async (id, status) => {
+  try {
+    const res = await axios.put(
+      `http://localhost:8000/api/order/${id}`,
+      { orderStatus: status }
+    );
+
+    return res.data?.success;
+  } catch (error) {
+    console.error(
+      "Update status error:",
+      error.response?.data || error.message
+    );
+    return false;
+  }
+};
+
+

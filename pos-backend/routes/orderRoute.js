@@ -5,16 +5,16 @@ import {
   updateOrder,
   getOrderById,
 } from "../controllers/orderController.js";
-import { isVerifiedUser } from "../middlewares/tokenVerification.js";
+//import { isVerifiedUser } from "../middlewares/tokenVerification.js";
 import Order from "../models/orderModel.js"; // ✅ Import model untuk cek order aktif
 
 const router = express.Router();
 
 // === ROUTE UTAMA ===
-router.route("/").post(isVerifiedUser, addOrder);
-router.route("/").get(isVerifiedUser, getOrders);
-router.route("/:id").get(isVerifiedUser, getOrderById);
-router.route("/:id").put(isVerifiedUser, updateOrder);
+router.route("/").post(/* isVerifiedUser, */ addOrder);
+router.route("/").get(/* isVerifiedUser, */ getOrders);
+router.route("/:id").get(/* isVerifiedUser, */ getOrderById);
+router.route("/:id").put(/* isVerifiedUser, */ updateOrder);
 
 // === ✅ ROUTE TAMBAHAN: CEK STATUS TABLE ===
 router.get("/check/:tableId", async (req, res) => {

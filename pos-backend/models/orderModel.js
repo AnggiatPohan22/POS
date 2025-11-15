@@ -1,5 +1,6 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
+// Define Order Schema
 const orderSchema = new mongoose.Schema({
   customerDetails: {
     name: { type: String, required: true },
@@ -10,9 +11,30 @@ const orderSchema = new mongoose.Schema({
     type: String,
     default: "PENDING", // PENDING | PAID
   },
+  orderType: {
+    type: String,
+    enum: ["Dine-In", "Take-Away", "Delivery", "Room"],
+    default: "Dine-In",
+  },
+  billNumber: {
+  type: String,
+  unique: true,
+  required: true,
+  sparse: true
+  },
+  outlet: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "Outlet",
+  required: false
+  },
   orderDate: {
     type: Date,
     default: Date.now,
+  },
+  // 🆕 Waktu create order format Indonesia (String)
+  orderDateFormatted: {
+    type: String,
+    default: null,
   },
   bills: {
     total: { type: Number, required: true },
@@ -39,4 +61,7 @@ const orderSchema = new mongoose.Schema({
   },
 }, { timestamps: true });
 
-module.exports = mongoose.model("Order", orderSchema);
+orderSchema.index({ billNumber: 1 }, { unique: true });
+
+export default mongoose.model("Order", orderSchema);
+

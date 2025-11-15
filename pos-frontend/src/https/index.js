@@ -10,16 +10,12 @@ const api = axios.create({
     }
 });
 
-export const login = async (reqData) => {
-    const response = await axios.post('http://localhost:8000/api/user/login', reqData, {
-        withCredentials: true // ✅ Penting untuk cookies
-    });
-    return response;
-};
+export const login = (data) => api.post("/api/user/login", data);
+
 
 //function to update table status
 export const updateTableStatus = async (tableId, status) => {
-  const res = await axios.patch(`/api/tables/${tableId}`, { status });
+  const res = await api.patch(`/api/tables/${tableId}`, { status });
   return res.data;
 };
 

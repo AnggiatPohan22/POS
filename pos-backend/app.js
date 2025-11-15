@@ -1,4 +1,4 @@
-import express from "express";
+import express, { application } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import bodyParser from "body-parser";
@@ -11,6 +11,10 @@ import userRoute from "./routes/userRoute.js";
 import tableRoute from "./routes/tableRoute.js";
 import orderRoute from "./routes/orderRoute.js";
 import xenditRoutes from "./routes/xenditRoutes.js";
+import outletRoute from "./routes/outletRoute.js";
+
+// MODELS
+import Outlet from "./models/outletModel.js";
 
 // Load environment variables
 dotenv.config();
@@ -48,6 +52,7 @@ app.use("/api/user", userRoute);
 app.use("/api/order", orderRoute);
 app.use("/api/table", tableRoute);
 app.use("/api/xendit", xenditRoutes);
+app.use("/api/outlet", outletRoute);
 
 // WEBHOOK Routes
 app.use("/webhook/xendit", xenditRoutes);
@@ -73,3 +78,21 @@ app.use((req, res) => {
 app.listen(PORT, () => {
     console.log(`Backend running on port ${PORT}`);
 });
+
+// === ✅ SEED OUTLETS DATA JIKA BELUM ADA ===
+const seedOutlets = async () => {
+  const outlets = [
+    { name: "Aruma Restaurant", code: "AR" },
+    { name: "Aruma Bar", code: "AB" }
+  ];
+
+  for (let outlet of outlets) {
+    const exists = await Outlet.findOne({ code: outlet.code });
+    if (!exists) {
+      await Outlet.create(outlet);
+      console.log(`🟢 Outlet created: ${outlet.name}`);
+    }
+  }
+};
+
+seedOutlets();

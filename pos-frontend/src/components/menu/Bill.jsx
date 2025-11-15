@@ -14,24 +14,29 @@ import PaymentModal from "./PaymentModal";
 import { createOrder } from "../../services/orderService";
 import { updateTableStatus } from "../../services/tableService";
 import { createVA } from "../../services/paymentService";
+import store from "../../redux/store";
 
 const Bill = () => {
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
-  const { formatIDR } = useCurrency();
+  const dispatch = useDispatch(); // Untuk dispatch action ke redux
+  const navigate = useNavigate(); // Untuk navigasi setelah selesai order
+  const { formatIDR } = useCurrency();  // Custom hook untuk format mata uang
 
-  const user = useSelector((state) => state.user);
-  const customer = useSelector((state) => state.customer);
-  const cartData = useSelector((state) => state.cart);
-  const selectedTable = useSelector((state) => state.table.selectedTable);
+  const user = useSelector((state) => state.user); // User login info
+  const customer = useSelector((state) => state.customer); // Customer info dari form
+  const cartData = useSelector((state) => state.cart); // Items di cart
+  const selectedTable = useSelector((state) => state.table.selectedTable); // Table yang dipilih
 
-  const total = useSelector(getTotalPrice);
-  const tax = (total * 11) / 100;
-  const totalWithTax = total + tax;
+  const total = useSelector(getTotalPrice); // Total sebelum pajak
+  const tax = (total * 11) / 100; // Pajak 11%
+  const totalWithTax = total + tax; // Total setelah pajak
 
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // Loading state ketika proses order
   const [paymentMethod, setPaymentMethod] = useState(null); // "Done" | "Payment"
-  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false); // Untuk modal payment
+
+
+
+
 
   // ✅ Validasi data sebelum submit
   const validateCustomerData = () => {
@@ -79,16 +84,28 @@ const handlePaymentProcess = async (paymentMethodSelected) => {
     const status =
       paymentMethodSelected === "Virtual Account BCA" ? "PENDING" : "PAID";
 
-    const result = await createOrder({
-      customer,
-      cartData,
+    const outletId = store.getState().outlet.selected
+    const payload = {
+      customerName: customer.name,
+      customerPhone: customer.phone || "+62",  // sementara default
+      guests: parseInt(customer.guests, 10) || 1,
+      orderType: customer.orderType || "Dine-In",
+      items: cartData.map(item => ({
+        product: item._id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+      })),
       total,
       tax,
       totalWithTax,
-      tableId: selectedTable?.id || null,
-      status,
-      paymentMethod: paymentMethodSelected,
-    });
+      table: selectedTable?.id || null,
+      orderStatus: status,
+      outlet: outletId,
+    };
+
+    const result = await createOrder(payload);
+
 
     if (!result.success) {
       enqueueSnackbar(result.message || "Failed to process payment", {
@@ -153,7 +170,8 @@ const handlePaymentProcess = async (paymentMethodSelected) => {
     if (paymentMethod === "Done") {
       try {
         setIsLoading(true);
-
+        const outletId = store.getState().outlet.selected
+        console.log("📌 OUTLET SENT:", outletId);
         const result = await createOrder({
           customer,
           cartData,
@@ -162,6 +180,18 @@ const handlePaymentProcess = async (paymentMethodSelected) => {
           totalWithTax,
           tableId: selectedTable?.id || null,
           status: "PENDING", // pending payment
+          outlet: outletId,
+        });
+
+        console.log("🚀 SEND ORDER PAYLOAD:", {
+          customer,
+          cartData,
+          total,
+          tax,
+          totalWithTax,
+          tableId: selectedTable?.id,
+          status: "PENDING",
+          outlet: outletId,
         });
 
         if (!result.success) {

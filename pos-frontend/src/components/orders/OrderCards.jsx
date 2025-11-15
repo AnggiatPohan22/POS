@@ -3,65 +3,52 @@ import { FaCheckDouble, FaCircle, FaUtensils, FaHome } from 'react-icons/fa';
 import axios from 'axios';
 import UpdateStatusModal from './UpdateStatusModal';
 
-const OrderCards = ({ data, refresh }) => {
+const OrderCards = ({ data, refresh, onSelect }) => {
     const [modalOpen, setModalOpen] = useState(false);
     const [updating, setUpdating] = useState(false);
 
     // ✅ Enhanced Fallback Data dengan berbagai kemungkinan field names
-    const customerName = data?.name || data?.customerName || data?.customer?.name || "Unknown Customer";
+    const customerName = data?.customerDetails?.name || "Unknown Customer";
     const avatar = customerName.substring(0, 2).toUpperCase();
-    const tableNumber = data?.tableNumber || data?.table || "-";
-    const items = data?.totalItems || data?.items?.length || data?.orderItems?.length || 0;
-    const orderType = (data?.orderType || data?.type || "dine in").toLowerCase();
-    const transactionCode = data?.transaction_code || data?.transactionCode || data?.id?.slice(-8) || "N/A";
-    const amount = data?.amount || data?.totalAmount || data?.total || 0;
-    const status = data?.status || "PENDING";
+    const tableNo = data?.table?.tableNo || "-";
+    const items = data?.items?.reduce((acc, i) => acc + (i.quantity || 1), 0) || 0;
+    const orderType = (data?.orderType || "Dine-In").toLowerCase();
+    const transactionCode = data?.billNumber || data?._id?.slice(-8) || "N/A";
+    const amount = data?.bills?.totalWithTax || 0;
+    const status = data?.orderStatus || "PENDING";
+
 
     const updatePaid = async () => {
-        if (!data._id && !data.id) {
-            alert("Error: Order ID not found");
+        if (!data._id) {
+            alert("Error: Order ID not found!");
             return;
         }
 
-        const orderId = data._id || data.id;
-        const endpoints = [
-            `http://localhost:8000/api/xendit/transactions/${orderId}/paid`,
-            `http://localhost:8000/api/transactions/${orderId}/paid`,
-            `http://localhost:8000/api/orders/${orderId}/paid`,
-            `http://localhost:8000/xendit/transactions/${orderId}/paid`
-        ];
+        if (updating) return; // Prevent double click
+        setUpdating(true);
 
         try {
-            setUpdating(true);
-            let success = false;
+            const res = await axios.put(
+                `http://localhost:8000/api/order/${data._id}`, 
+                { orderStatus: "PAID" }
+            );
 
-            for (const endpoint of endpoints) {
-                try {
-                    console.log(`Trying update endpoint: ${endpoint}`);
-                    const res = await axios.put(endpoint);
-                    if (res.data.success) {
-                        success = true;
-                        alert("Updated to PAID ✅");
-                        setModalOpen(false);
-                        refresh();
-                        break;
-                    }
-                } catch (err) {
-                    console.log(`Failed: ${endpoint}`);
-                    continue;
-                }
+            if (res.data.success) {
+                enqueueSnackbar("Order updated to PAID! ✅", { variant: "success" });
+                setModalOpen(false);
+                refresh(); // refresh list
+            } else {
+                enqueueSnackbar("Failed updating status", { variant: "error" });
             }
 
-            if (!success) {
-                alert("Failed to update. Please check backend endpoint.");
-            }
         } catch (error) {
-            console.error("Update error:", error);
-            alert("Error updating status");
-        } finally {
-            setUpdating(false);
+            console.error("Payment Update Error:", error);
+            enqueueSnackbar("Server error", { variant: "error" });
         }
+
+        setUpdating(false);
     };
+
 
     // Status configuration
     const statusConfig = {
@@ -91,7 +78,7 @@ const OrderCards = ({ data, refresh }) => {
         <>
             <div 
                 className='w-full max-w-[400px] bg-[#262626] p-4 rounded-lg mb-4 cursor-pointer hover:bg-[#2d2d2d] transition-colors border border-[#383838]'
-                onClick={() => setModalOpen(true)}
+                onClick={() => onSelect && onSelect(data)}
             >
                 {/* ... (rest of the JSX remains the same) */}
                 <div className='flex items-center gap-4'>
@@ -105,18 +92,27 @@ const OrderCards = ({ data, refresh }) => {
                                 {customerName}
                             </h1>
                             <div className='flex items-center gap-2 text-[#ababab] text-sm flex-wrap'>
-                                <span>#{transactionCode}</span>
-                                <span>•</span>
-                                <span className='flex items-center gap-1 capitalize'>
-                                    {orderType === "dine in" ? (
-                                        <FaUtensils className="text-xs" />
-                                    ) : (
-                                        <FaHome className="text-xs" />
+                                { data?.billNumber && (
+                                        <span>#{data.billNumber}</span>
                                     )}
-                                    {orderType}
-                                </span>
+                                {/* DISPLAY BILL INFO */}
                                 <span>•</span>
-                                <span>Table {tableNumber}</span>
+                                <span className="capitalize">
+                                {data.orderType || "Unknown Type"}
+                                </span>
+
+                                {data?.table?.tableNo && (
+                                <>
+                                    <span>•</span>
+                                    <span>Table {data.table.tableNo}</span>
+                                </>
+                                )}
+                                {data?.outlet?.name && (
+                                <>
+                                    <span>{data.outlet.name}</span>
+                                </>
+                                )}
+
                             </div>
                         </div>
 

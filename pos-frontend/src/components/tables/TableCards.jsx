@@ -5,11 +5,14 @@ import { useNavigate } from "react-router-dom";
 import { getAvatarName } from "../../utils";
 import { setSelectedTable } from "../../redux/slices/tableSlices";
 import { enqueueSnackbar } from "notistack";
+import { setOutlet } from "../../redux/slices/outletSlice"; // Import action untuk set outlet
+import store from "../../redux/store";
 
-const TableCards = ({ id, name, status, initials, seat }) => {
+const TableCards = ({ id, name, status, initials, seat, outlet }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [isBooked, setIsBooked] = useState(false);
+  const currentOutlet = store.getState().outlet.selected;
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
 
@@ -33,11 +36,25 @@ const TableCards = ({ id, name, status, initials, seat }) => {
   const handleClick = () => {
     if (isBooked) return;
 
-    dispatch(setSelectedTable({ id, tableNo: name }));
-    console.log("🟢 Table Selected:", { id, tableNo: name });
+    const selectedTable = {
+      id,
+      tableNo: name,
+      status,
+      seat,
+    };
 
+    dispatch(setSelectedTable({ id, tableNo: name }));
+    console.log("🟢 Selected Table:", selectedTable);
+
+  //  dispatch(setOutlet(outlet)); // Set outlet ke Redux
     navigate("/menu");
   };
+
+  if (outlet && currentOutlet && outlet !== currentOutlet) {
+  enqueueSnackbar("⚠ Table belongs to different outlet", { variant: "warning" });
+  return;
+}
+
 
   return (
     <div

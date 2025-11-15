@@ -20,6 +20,7 @@ const PaymentModal = ({
 }) => {
   const [selectedPayment, setSelectedPayment] = useState(null);
   const [openDropdown, setOpenDropdown] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   if (!open) return null;
 
@@ -70,21 +71,28 @@ const PaymentModal = ({
   };
 
   const handleClickProcess = async () => {
-    if (!selectedPayment)
-      return enqueueSnackbar("Select payment method", { variant: "warning" });
+  if (isProcessing) return; // prevent spam clicking
 
-    try {
-      const success = await onPaymentProcessed(selectedPayment);
+  if (!selectedPayment)
+    return enqueueSnackbar("Select payment method", { variant: "warning" });
 
-      if (success) {
-        await onSuccess();
-        onClose();
-      }
-    } catch (err) {
-      console.error(err);
-      enqueueSnackbar("Payment error", { variant: "error" });
+  try {
+    setIsProcessing(true);
+    const success = await onPaymentProcessed(selectedPayment);
+
+    if (success) {
+      await onSuccess();
+      onClose();
     }
-  };
+  } catch (err) {
+    console.error(err);
+    enqueueSnackbar("Payment error", { variant: "error" });
+  } finally {
+    setIsProcessing(false);
+  }
+};
+  
+
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[999]">
@@ -160,15 +168,15 @@ const PaymentModal = ({
 
           <button
             onClick={handleClickProcess}
-            disabled={!selectedPayment}
+            disabled={!selectedPayment || isProcessing}
             className={`w-1/2 py-3 rounded-lg font-semibold transition-all
               ${
-                !selectedPayment
+                isProcessing
                   ? "bg-gray-600 text-gray-300 cursor-not-allowed"
                   : "bg-[#f6b100] text-black hover:bg-[#d99a00]"
               }`}
           >
-            Process
+            {isProcessing ? "Processing..." : "Process"}
           </button>
         </div>
       </div>

@@ -2,13 +2,19 @@ import React, { useState, useEffect } from 'react';
 import BottomNav from '../components/shared/BottomNav';
 import OrderCards from '../components/orders/OrderCards';
 import BackButton from '../components/shared/BackButton';
+import { updateOrderStatus } from '../services/orderService';
+import UpdateStatusModal from '../components/orders/UpdateStatusModal';
 import axios from 'axios';
 
 const Orders = () => {
-    const [status, setStatus] = useState("all");
-    const [orders, setOrders] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const [status, setStatus] = useState("all"); // "all" | "pending" | "paid"
+    const [orders, setOrders] = useState([]);  // Semua orders dari backend
+    const [loading, setLoading] = useState(true); // Loading state
+    const [error, setError] = useState(null); // Error state
+    const [selectedOrder, setSelectedOrder] = useState(null); // Untuk modal update status
+    const [modalOpen, setModalOpen] = useState(false);  // Untuk modal update status
+    const [outletFilter, setOutletFilter] = useState("all"); // "all" | "AR" | "AB" 
+
 
     // ✅ Base URL configuration
     const API_BASE_URL = "http://localhost:8000/api"; // Coba ganti ke /api
@@ -16,55 +22,18 @@ const Orders = () => {
     // const API_BASE_URL = "http://localhost:8000"; // Kalau endpoint langsung di root
 
     const fetchOrders = async () => {
-        try {
-            setLoading(true);
-            setError(null);
-            
-            // ✅ Coba berbagai endpoint yang mungkin
-            const endpoints = [
-                `${API_BASE_URL}/xendit/transactions`,
-                `${API_BASE_URL}/transactions`,
-                `${API_BASE_URL}/orders`,
-                `http://localhost:8000/api/transactions`,
-                `http://localhost:8000/api/orders`
-            ];
+    try {
+        setLoading(true);
 
-            let response = null;
-            
-            // Coba satu per satu endpoint
-            for (const endpoint of endpoints) {
-                try {
-                    console.log(`Trying endpoint: ${endpoint}`);
-                    response = await axios.get(endpoint);
-                    if (response.data) {
-                        console.log("✅ Success with endpoint:", endpoint);
-                        break;
-                    }
-                } catch (err) {
-                    console.log(`❌ Failed: ${endpoint}`);
-                    continue;
-                }
-            }
-
-            if (response && response.data) {
-                // Handle berbagai format response
-                if (response.data.success) {
-                    setOrders(response.data.data || []);
-                } else if (Array.isArray(response.data)) {
-                    setOrders(response.data);
-                } else {
-                    setOrders(response.data.orders || response.data.transactions || []);
-                }
-            } else {
-                setError("No valid endpoint found");
-            }
-            
-        } catch (error) {
-            console.log("Final fetch error:", error);
-            setError(`Connection error: ${error.message}`);
-        } finally {
-            setLoading(false);
-        }
+        const response = await axios.get("http://localhost:8000/api/order");
+        setOrders(response.data.data || []);
+        
+    } catch (error) {
+        console.error("Fetch Orders Error:", error);
+        setError("Failed to load orders");
+    } finally {
+        setLoading(false);
+    }
     };
 
     useEffect(() => {
@@ -72,11 +41,29 @@ const Orders = () => {
         fetchOrders();
     }, []);
 
-    const filteredOrders = orders.filter(order => {
-        if (status === "all") return true;
-        const orderStatus = (order.status || "").toLowerCase();
-        return orderStatus === status.toLowerCase();
+    // Filtered Orders berdasarkan status dan outlet
+   const filteredOrders = orders.filter((order) => {
+    // status filter
+    const matchStatus =
+        status === "all"
+        ? true
+        : status === "pending"
+        ? order.orderStatus === "PENDING"
+        : status === "paid"
+        ? order.orderStatus === "PAID"
+        : true;
+
+    // outlet filter – gunakan order.outlet.code dari populate
+    const outletCode = order.outlet?.code; // AR / AB / undefined
+    const matchOutlet =
+        outletFilter === "all" ? true : outletCode === outletFilter;
+
+    return matchStatus && matchOutlet;
     });
+
+
+    
+
 
     return (
         <section className='bg-[#1f1f1f] min-h-screen overflow-hidden'>
@@ -89,17 +76,16 @@ const Orders = () => {
                 </div>
 
                 <div className='flex gap-2'>
-                    {["all", "pending", "paid"].map((filterStatus) => (
-                        <button 
-                            key={filterStatus}
-                            onClick={() => setStatus(filterStatus)}
-                            className={`text-[#ababab] text-sm md:text-lg transition-colors ${
-                                status === filterStatus 
-                                ? "bg-[#383838] text-white" 
-                                : "hover:bg-[#2a2a2a]"
-                            } rounded-lg px-3 md:px-5 py-2 capitalize`}
+                    {["all", "AR", "AB"].map((o) => (
+                        <button
+                        key={o}
+                        onClick={() => setOutletFilter(o)}
+                        className={`
+                            text-xs md:text-sm px-3 py-1 rounded-lg
+                            ${outletFilter === o ? "bg-[#383838] text-white" : "text-[#ababab] hover:bg-[#2a2a2a]"}
+                        `}
                         >
-                            {filterStatus}
+                        {o === "all" ? "All Outlets" : o === "AR" ? "Aruma Restaurant" : "Aruma Bar"}
                         </button>
                     ))}
                 </div>
@@ -148,9 +134,13 @@ const Orders = () => {
                     {filteredOrders.length > 0 ? (
                         filteredOrders.map((order) => (
                             <OrderCards 
-                                key={order._id || order.id} 
+                                key={order._id} 
                                 data={order} 
-                                refresh={fetchOrders} 
+                                refresh={fetchOrders}
+                                onSelect={() => {
+                                    setSelectedOrder(order);
+                                    setModalOpen(true);
+                                }} 
                             />
                         ))
                     ) : (
@@ -160,6 +150,20 @@ const Orders = () => {
                     )}
                 </div>
             )}
+
+            {selectedOrder && (
+            <UpdateStatusModal
+                open={modalOpen}
+                onClose={() => setModalOpen(false)}
+                data={selectedOrder}
+                onUpdate={async () => {
+                    await updateOrderStatus(selectedOrder._id, "PAID");
+                    fetchOrders();
+                    setModalOpen(false);
+                }}
+            />
+            )}
+
 
             <BottomNav />
         </section>

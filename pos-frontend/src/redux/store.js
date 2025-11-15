@@ -4,6 +4,7 @@ import carSlice from "./slices/cartSlices";
 import userSlice from "./slices/userSlice";
 import customerReducer from "./slices/customerSlices";
 import tableReducer from "./slices/tableSlices";
+import outletSlice from "./slices/outletSlice";
 
 
 // File ini di buat setelah instalasi Redux-React
@@ -13,6 +14,7 @@ const store = configureStore({
         cart : carSlice,
         user : userSlice,
         table : tableReducer,
+        outlet : outletSlice,
     },
     
     // code ini untuk melihat data di redux store

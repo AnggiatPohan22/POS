@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaHome } from 'react-icons/fa';
 import { MdOutlineReorder, MdTableBar } from 'react-icons/md';
 import { CiCircleMore } from 'react-icons/ci';  
@@ -7,6 +7,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import Modal from './Modal';
 import { useDispatch } from "react-redux";
 import { setCustomerInfo } from "../../redux/slices/customerSlices.js";
+import { setOutlet } from '../../redux/slices/outletSlice.js';
 
 
 const BottomNav = () => {
@@ -38,35 +39,57 @@ const BottomNav = () => {
 
     // Function button Create Order pada Modal
     const handleCreateOrder = () => {
-  if (!name.trim()) return alert("Please enter customer name!");
-  if (!phone.trim()) return alert("Please enter phone number!");
+    if (!name.trim()) return alert("Please enter customer name!");
+    if (!phone.trim()) return alert("Please enter phone number!");
+    if (!selectedOutlet) return alert("Please select outlet!");
 
-  dispatch(setCustomerInfo({
-    name,
-    phone,
-    guests: guestCount,
-    orderType,
-  }));
+    // Kirim data customer ke Redux Store
+    dispatch(setCustomerInfo({
+        name,
+        phone,
+        guests: guestCount,
+        orderType
+    }));
 
-        // ✅ SET CUSTOMER DATA KE REDUX & LANJUT KE TABLE SELECTION
-        // console.log("✅ Customer data saved to Redux:", {
-        //     customerName: name,
-        //     customerPhone: phone,
-        //     guests: guestCount,
-        //     orderType: orderType
-        // });
+    // Kirim outlet ke Redux Store
+    dispatch(setOutlet(selectedOutlet)); // ⬅ tambah ini untuk kirim outlet ke Redux
+    console.log("🟢 Outlet Set:", selectedOutlet);
 
-        // Reset form dan close modal
-        setName("");
-        setPhone(""); 
-        setGuestCount(1);
-        setOrderType("Dine-In");
-        
-        closeModal();
-        
-        // ✅ NAVIGATE KE TABLE SELECTION PAGE
-        navigate('/tables');
+    // Reset form setelah submit
+    setName("");
+    setPhone("");
+    setGuestCount(1);
+    setOrderType("Dine-In");
+    setSelectedOutlet("");
+
+    closeModal();
+
+    // 🔥 IF TAKE-AWAY → langsung ke MENU!
+    if (orderType === "Take-Away") {
+        return navigate("/menu");
+    }
+
+    // 🔥 IF DINE-IN → ke TABLES!
+    navigate('/tables');
     };
+
+
+    const [selectedOutlet, setSelectedOutlet] = useState("");
+    const [outlets, setOutlets] = useState([]);
+
+    useEffect(() => {
+    if (isModalOpen) {
+        fetchOutlets();
+    }
+    }, [isModalOpen]);
+
+    const fetchOutlets = async () => {
+    const res = await fetch("http://localhost:8000/api/outlet");
+    const data = await res.json();
+    if (data.success) setOutlets(data.data);
+    };
+
+
 
     return (
         <div className="fixed bottom-0 left-0 right-0 bg-[#262626] p-2 h-16 flex justify-around ">
@@ -165,7 +188,21 @@ const BottomNav = () => {
                         </label>
                     </div>
                 </div>
-                
+                <div>
+                    <label className="text-sm text-[#ababab] mt-2 block">Select Outlet</label>
+                    <select
+                    value={selectedOutlet}
+                    onChange={(e) => setSelectedOutlet(e.target.value)}
+                    className="w-full bg-[#1f1f1f] text-[#f5f5f5] p-3 rounded-lg border border-[#383838] mt-1"
+                    >
+                    <option value="">-- Select Outlet --</option>
+                    {outlets.map((outlet) => (
+                        <option key={outlet._id} value={outlet._id}>
+                        {outlet.name}
+                        </option>
+                    ))}
+                    </select>
+                </div>
                 <div>
                     <label className='block mb-2 mt-3 text-sm font-medium text-[#ababab]'>Guest</label>
                     <div className='flex item-center justify-between bg-[#1f1f1f] rounded-lg p-3 px-4 py-3 rounded-lg'>
