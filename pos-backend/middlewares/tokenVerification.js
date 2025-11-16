@@ -1,32 +1,30 @@
-const jwt = require("jsonwebtoken");
-const createHttpError = require("http-errors");
-const config = require("../config/config");
+import jwt from "jsonwebtoken";
+import createHttpError from "http-errors";
+import prisma from "../config/prismaConfig.js";
 
-const isVerifiedUser = (req, res, next) => {
+const JWT_SECRET = process.env.ACCESS_TOKEN_SECRET;
+
+export const isVerifiedUser = async (req, res, next) => {
   try {
-    console.log("🟢 tokenVerification.js CHECK TOKEN");
-
-    const token = req.cookies.access_token; // 👈 FIX: Ambil token yang benar
+    const token = req.cookies.access_token;
 
     if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: "Unauthorized - Token missing",
-      });
+      return next(createHttpError(401, "Unauthorized - Token missing"));
     }
 
-    const decoded = jwt.verify(token, config.ACCESS_TOKEN_SECRET);
-    req.user = decoded; // ✔ Bisa dipakai di route lain
+    const decoded = jwt.verify(token, JWT_SECRET);
 
-    next();
-  } catch (error) {
-    console.log("🔴 TOKEN ERROR:", error.message);
-
-    return res.status(401).json({
-      success: false,
-      message: "Token expired or invalid. Please login again.",
+    const user = await prisma.users.findUnique({
+      where: { id: decoded.id },
     });
+
+    if (!user) return next(createHttpError(401, "Invalid user token"));
+
+    req.user = user;
+    next();
+
+  } catch (error) {
+    console.error("🔴 JWT Verification Error:", error.message);
+    return next(createHttpError(401, "Token expired or invalid"));
   }
 };
-
-module.exports = { isVerifiedUser };

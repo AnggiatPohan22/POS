@@ -4,37 +4,42 @@ import {
   getOrders,
   updateOrder,
   getOrderById,
+  restoreOrder,
+  forceDeleteOrder
 } from "../controllers/orderController.js";
-//import { isVerifiedUser } from "../middlewares/tokenVerification.js";
-import Order from "../models/orderModel.js"; // ✅ Import model untuk cek order aktif
+import prisma from "../config/prismaConfig.js";
 
 const router = express.Router();
 
-// === ROUTE UTAMA ===
-router.route("/").post(/* isVerifiedUser, */ addOrder);
-router.route("/").get(/* isVerifiedUser, */ getOrders);
-router.route("/:id").get(/* isVerifiedUser, */ getOrderById);
-router.route("/:id").put(/* isVerifiedUser, */ updateOrder);
+// Routes Orders
+router.post("/", addOrder);
+router.get("/", getOrders);
+router.get("/:id", getOrderById);
+router.put("/:id", updateOrder);
+router.post("/:id/restore", restoreOrder);
+router.delete("/:id/force", forceDeleteOrder);
 
-// === ✅ ROUTE TAMBAHAN: CEK STATUS TABLE ===
+
+// Check active order by Table ID
 router.get("/check/:tableId", async (req, res) => {
   try {
     const { tableId } = req.params;
 
-    const activeOrder = await Order.findOne({
-      table: tableId,
-      orderStatus: "PENDING", // ✔ harus PENDING untuk dianggap masih ditempati
+    const activeOrder = await prisma.orders.findFirst({
+      where: {
+        table: Number(tableId),
+        orderStatus: "PENDING",
+      }
     });
 
-    return res.json({
+    res.json({
       success: true,
-      isBooked: Boolean(activeOrder),
+      isBooked: !!activeOrder,
     });
+
   } catch (error) {
-    console.error("❌ Error checking order:", error);
-    res.status(500).json({ success: false, message: "Internal server error" });
+    res.status(500).json({ success: false, message: "Server error" });
   }
 });
-
 
 export default router;

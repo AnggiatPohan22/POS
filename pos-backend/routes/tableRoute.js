@@ -1,14 +1,10 @@
-const express = require("express");
-const { addTable, getTable, updateTable } = require("../controllers/tableController");
-//const { isVerifiedUser } = require("../middlewares/tokenVerification");
-
+import express from "express";
+import { addTable, getTables, updateTable, deleteTable } from "../controllers/tableController.js";
 const router = express.Router();
 
+router.post("/", addTable);
+router.get("/", getTables);
+router.put("/:id", updateTable);
+router.delete("/:id", deleteTable);
 
-router.route("/").post(/* isVerifiedUser , */addTable);
-router.route("/").get(/* isVerifiedUser , */getTable);
-router.route("/:id").put(/* isVerifiedUser , */updateTable);
-
-console.log("✅ tableRoute loaded successfully");
-
-module.exports = router;
+export default router;

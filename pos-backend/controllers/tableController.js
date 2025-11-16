@@ -1,116 +1,84 @@
-const Table = require("../models/tableModel");
-const createHttpError = require("http-errors");
-const mongoose = require("mongoose")
+import prisma from "../config/prismaConfig.js";
+import createHttpError from "http-errors";
 
-const addTable = async (req, res, next) => {
+// ➕ Create Table
+export const addTable = async (req, res) => {
   try {
-    let payload = req.body;
+    const { tableNo, status, seats, outletId } = req.body;
 
-    // ✅ Jika user kirim array → batch insert
-    if (Array.isArray(payload)) {
-      const results = [];
-      for (const item of payload) {
-        const { tableNo, seats } = item;
-
-        if (!tableNo) {
-          continue; // skip data rusak
-        }
-
-        const exists = await Table.findOne({ tableNo });
-        if (exists) {
-          continue; // skip duplikasi
-        }
-
-        const created = new Table({ tableNo, seats });
-        await created.save();
-        results.push(created);
-      }
-
-      return res.status(201).json({
-        success: true,
-        message: "Batch table insert completed",
-        inserted: results.length,
-        data: results
-      });
-    }
-
-    // ✅ Jika user kirim single object
-    const { tableNo, seats } = payload;
-
-    if (!tableNo) {
-      const error = createHttpError(400, "Please provide Table No!");
-      return next(error);
-    }
-
-    const isTablePresent = await Table.findOne({ tableNo });
-
-    if (isTablePresent) {
-      const error = createHttpError(400, "Table already exist");
-      return next(error);
-    }
-
-    const newTable = new Table({ tableNo, seats });
-    await newTable.save();
-
-    res.status(201).json({
-      success: true,
-      message: "Table added!",
-      data: newTable,
+    const newTable = await prisma.tables.create({
+      data: { tableNo, status, seats, outletId }
     });
 
+    res.status(201).json({
+      status: true,
+      message: "Table created successfully",
+      data: newTable,
+    });
   } catch (error) {
-    return next(error);
+    console.error("❌ Add table error:", error);
+    res.status(500).json({ status: false, message: "Failed to create table", error: error.message });
   }
 };
 
+// 📌 Get All Tables (Optional filter by outletId)
+export const getTables = async (req, res) => {
+  try {
+    const { outletId } = req.query;
 
-const getTable = async (req, res, next) => {
-    try {
-        
-        const tables = await Table.find().sort({tableNo: 1}).populate({
-            path: "currentOrder",
-            select: "customerDetails"
-        });
-        res.status(200).json({success: true, data: tables});
+    const tables = await prisma.tables.findMany({
+      where: outletId ? { outletId } : {},
+      include: { outlets: true }
+    });
 
-    } catch (error) {
-        return next(error);
-    }
-}
+    res.status(200).json({
+      status: true,
+      message: "Tables fetched successfully",
+      data: tables,
+    });
+  } catch (error) {
+    console.error("❌ Get tables error:", error);
+    res.status(500).json({ status: false, message: "Failed to fetch tables", error: error.message });
+  }
+};
 
-const updateTable = async (req, res, next) => {
-    try {
-        console.log("🟢 updateTable called with id:", req.params.id);
-        console.log("🟡 Body:", req.body);
+// 📝 Update Table
+export const updateTable = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { tableNo, status, seats, outletId } = req.body;
 
-        const { status, orderId} = req.body;
+    const updatedTable = await prisma.tables.update({
+      where: { id },
+      data: { tableNo, status, seats, outletId },
+    });
 
-        const { id } = req.params;
-        
-                if(!mongoose.Types.ObjectId.isValid(id)){
-                    const error = createHttpError(404, "Invalid Id!");
-                    return next (error);
-                }
+    res.status(200).json({
+      status: true,
+      message: "Table updated successfully",
+      data: updatedTable,
+    });
+  } catch (error) {
+    console.error("❌ Update table error:", error);
+    res.status(500).json({ status: false, message: "Failed to update table", error: error.message });
+  }
+};
 
-        const table = await Table.findByIdAndUpdate(
-            id,
-            { status, currentOrder: orderId },
-            { new: true }
-        );
+// ❌ Delete Table
+export const deleteTable = async (req, res) => {
+  try {
+    const { id } = req.params;
 
-        if(!table){
-            const error = createHttpError(404, "Table not found!");
-            return next(error);
-        }
+    await prisma.tables.delete({
+      where: { id },
+    });
 
-        res.status(200).json({success: true, message: "Table updated!",
-            data: table
-        });
-
-    } catch (error) {
-        console.log("🔴 Error in updateTable:", error);
-        next(error);
-    }
-}
-
-module.exports = {addTable, getTable, updateTable};
+    res.status(200).json({
+      status: true,
+      message: "Table deleted successfully",
+    });
+  } catch (error) {
+    console.error("❌ Delete table error:", error);
+    res.status(500).json({ status: false, message: "Failed to delete table", error: error.message });
+  }
+};

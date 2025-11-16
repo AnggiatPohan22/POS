@@ -1,16 +1,13 @@
-const express = require("express");
-const { register, login, getUserData, logout } = require("../controllers/userController");
-const { isVerifiedUser } = require("../middlewares/tokenVerification");
+import express from "express";
+import { register, login, getUserData, logout } from "../controllers/userController.js";
+import { isVerifiedUser } from "../middlewares/tokenVerification.js";
+
 const router = express.Router();
 
+router.post("/register", register);
+router.post("/login", login);
+router.post("/logout", logout);
 
+router.get("/", isVerifiedUser, getUserData);
 
-//Aunthentication Routes
-router.route("/register").post(register);
-router.route("/login").post(login);
-router.route("/logout").post(logout)
-
-
-router.route("/").get(isVerifiedUser ,getUserData);
-
-module.exports = router;
+export default router;

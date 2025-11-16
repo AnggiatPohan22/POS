@@ -1,29 +1,24 @@
-// controllers/xenditController.js
-import Order from "../models/orderModel.js";
+import prisma from "../config/prismaConfig.js";
 
 export const vaCallback = async (req, res) => {
-    try {
-        console.log("Callback diterima:", req.body);
+  try {
+    const { external_id, status, amount } = req.body;
 
-        const { external_id, status, amount } = req.body;
+    const order = await prisma.orders.updateMany({
+      where: { payment_external_id: external_id },
+      data: {
+        payment_status: status,
+        payment_paid_amount: amount,
+        payment_paid_at: new Date(),
+        orderStatus: status,
+      },
+    });
 
-        // Update order berdasarkan external_id (karena kita simpan di payment)
-        const order = await Order.findOne({ paymentExternalId: external_id });
+    if (!order.count)
+      return res.status(404).json({ success: false, message: "Order not found" });
 
-        if (!order) {
-            return res.status(404).json({ success: false, message: "Order not found" });
-        }
-
-        // Update status pembayaran
-        order.paymentStatus = status;
-        order.paidAmount = amount;
-        order.paidAt = new Date();
-
-        await order.save();
-
-        return res.status(200).json({ success: true });
-    } catch (error) {
-        console.log("Error Callback:", error);
-        return res.status(500).json({ success: false });
-    }
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false });
+  }
 };
