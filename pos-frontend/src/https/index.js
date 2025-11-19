@@ -1,5 +1,7 @@
 import axios from "axios";
 
+const API_BASE_URL = "http://localhost:8000/api";
+
 
 const api = axios.create({
     baseURL: import.meta.env.VITE_BACKEND_URL,
@@ -25,4 +27,7 @@ export const getUserData = () => api.get("/api/user");
 export const logout = () => api.post("/api/user/logout");
 
 export const addTable = (data) => api.post("/api/table/", data);
-export const getTables = () => api.get("/api/table/");
+
+export const getTables = async (outletId) => {
+  return await axios.get(`${API_BASE_URL}/tables?outletId=${outletId}`);
+};

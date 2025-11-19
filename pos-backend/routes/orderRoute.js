@@ -4,10 +4,11 @@ import {
   getOrders,
   updateOrder,
   getOrderById,
-  restoreOrder,
-  forceDeleteOrder
+  deleteOrder,
+  completeOrder,
 } from "../controllers/orderController.js";
 import prisma from "../config/prismaConfig.js";
+
 
 const router = express.Router();
 
@@ -16,8 +17,11 @@ router.post("/", addOrder);
 router.get("/", getOrders);
 router.get("/:id", getOrderById);
 router.put("/:id", updateOrder);
-router.post("/:id/restore", restoreOrder);
-router.delete("/:id/force", forceDeleteOrder);
+router.put("/:id", deleteOrder)
+router.put("/order/:id/complete", completeOrder);
+//router.post("/:id/restore", restoreOrder);
+//router.delete("/:id/force", forceDeleteOrder);
+//router.get("/check/:tableId", checkActiveOrder);
 
 
 // Check active order by Table ID

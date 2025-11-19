@@ -1,50 +1,63 @@
 import { createSlice } from "@reduxjs/toolkit";
 
-// 🧠 Fungsi untuk generate nomor bill otomatis
-const generateBillNo = (orderType) => {
-  const prefix = orderType === "Dine-In" ? "DIN" : "TAK";
-  const date = new Date();
-  const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const year = String(date.getFullYear()).slice(-2);
-  const random = Math.floor(1000 + Math.random() * 9000);
-  return `${prefix}-${day}${month}${year}-${random}`;
-};
-
+/**
+ * 🧠 Initial state customer order (bill)
+ * Digunakan untuk menyimpan:
+ * - Informasi customer (nama, phone, outlet, guest)
+ * - Nomor bill hasil generate backend
+ * - Status & timestamp pembayaran
+ */
 const initialState = {
+  customerId: null, // UUID dari backend (primary key)
   name: "",
   phone: "",
   guests: 1,
   orderType: "Dine-In",
-  billNo: "",
-  createdAt: null,
-  paidAt: null,
+  outletId: null,
+  status: "PENDING", // PENDING, PAID, or CANCELLED
+  billNumber: "", // dari backend
+  createdAt: null,  // UTC timestamp saat bill dibuat
+  paidAt: null,     // UTC timestamp saat payment sukses
 };
 
 const customerSlice = createSlice({
   name: "customer",
   initialState,
   reducers: {
-    // ✅ Set customer info saat buat order
+    /**
+     * 🏁 Dipanggil setelah customer berhasil dibuat di backend
+     * Hanya menyimpan data penting yang akan dipakai di step selanjutnya.
+     */
     setCustomerInfo: (state, action) => {
-      const { name, phone, guests, orderType } = action.payload;
-      state.name = name;
-      state.phone = phone;
-      state.guests = guests;
-      state.orderType = orderType;
-      state.billNo = generateBillNo(orderType);
-      state.createdAt = new Date().toISOString();
+    const { customerId, name, phone, guests, outletId, orderType } = action.payload;
+    state.customerId = customerId;
+    state.name = name;
+    state.phone = phone;
+    state.guests = guests;
+    state.outletId = outletId;
+    state.orderType = orderType; // 🔥 penting!
+  },
+
+
+    /**
+     * 💳 Dipanggil ketika payment berhasil → update paid timestamp
+     */
+    setPaidTime: (state, action) => {
+      state.paidAt = action.payload;
+      state.status = "PAID";
     },
 
-    // ✅ Update waktu paid (setelah payment sukses)
-    setPaidTime: (state) => {
-      state.paidAt = new Date().toISOString();
-    },
-
-    // ✅ Reset customer info setelah transaksi selesai
+    /**
+     * 🔄 Reset semua data customer setelah transaksi selesai/cancel
+     */
     resetCustomerInfo: () => initialState,
   },
 });
 
-export const { setCustomerInfo, setPaidTime, resetCustomerInfo } = customerSlice.actions;
+export const {
+  setCustomerInfo,
+  setPaidTime,
+  resetCustomerInfo,
+} = customerSlice.actions;
+
 export default customerSlice.reducer;

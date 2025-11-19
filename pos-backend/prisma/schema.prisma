@@ -28,27 +28,25 @@ model menu_categories {
   slug        String?      @unique
   description String?
   isActive    Boolean?
-  menu_items  menu_items[]
+  menuItems   menu_items[]
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model menu_item_outlets {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  itemId      String   @db.Uuid  // FIX
-  outletId    String?  @db.Uuid  // FIX
+  itemId      String   @db.Uuid // FIX
+  outletId    String?  @db.Uuid // FIX
   price       Decimal? @db.Decimal
   stock       Int?
   isAvailable Boolean?
 
-  menu_items  menu_items @relation(fields: [itemId], references: [id])
-  outlets     outlets?   @relation(fields: [outletId], references: [id])
+  menuItems menu_items @relation(fields: [itemId], references: [id])
+  outlets   outlets?   @relation(fields: [outletId], references: [id])
 }
-
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model menu_items {
   id          String   @id @default(uuid()) @db.Uuid
-  categoryId  String   @db.Uuid
   name        String
   description String?
   basePrice   Decimal  @db.Decimal(18, 2)
@@ -58,7 +56,7 @@ model menu_items {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  order_items       order_items[]
+  orderItems        order_items[]
   menuCategories    menu_categories?    @relation(fields: [menu_categoriesId], references: [id])
   menu_categoriesId String?             @db.Uuid
   menuItemOutlets   menu_item_outlets[]
@@ -72,34 +70,35 @@ model menu_variants {
   name            String?
   additionalPrice Decimal?   @db.Decimal
   isAvailable     Boolean?
-  menu_items      menu_items @relation(fields: [itemId], references: [id])
+  menuItems       menu_items @relation(fields: [itemId], references: [id])
 }
-
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model outlets {
-  id                String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name              String
-  code              String?
-  timezone          String   @default("Asia/Makassar")
-  isActive          Boolean?
-  menu_item_outlets menu_item_outlets[]
-  tables            tables[]
-  transactions      transactions[]
+  id              String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name            String
+  code            String?
+  timezone        String              @default("Asia/Makassar")
+  isActive        Boolean?
+  menuItemOutlets menu_item_outlets[]
+  tables          tables[]
+  transactions    transactions[]
+  customers       customers[]
+  orders          orders[]
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model tables {
-  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tableNo        Int
   status         String?
   seats          Int?
-  outletId       String   @db.Uuid   // FIX: remove default random UUID
-  currentOrderId String?  @db.Uuid   // FIX: remove default random UUID
-  outlets        outlets  @relation(fields: [outletId], references: [id])
+  outletId       String         @db.Uuid // FIX: remove default random UUID
+  currentOrderId String?        @db.Uuid // FIX: remove default random UUID
+  outlets        outlets        @relation(fields: [outletId], references: [id])
   transactions   transactions[]
+  orders         orders[]
 }
-
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model users {
@@ -112,51 +111,98 @@ model users {
   createdAt DateTime? @default(now()) @db.Timestamptz(6)
 }
 
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model transactions {
-  id         String   @id @default(uuid()) @db.Uuid
-  customerId String   @db.Uuid
-  outletId   String   @db.Uuid
-  tableId    String?  @db.Uuid
-  orderType  String // Dine-In, Take-Away, Delivery, Room
-  status     String   @default("PENDING")
-  createdAt  DateTime @default(now())
+  id            String   @id @default(uuid()) @db.Uuid
+  billNumber    String
+  paymentMethod String
+  totalPayment  Decimal  @db.Decimal(18, 2)
+  tax           Decimal  @db.Decimal(18, 2)
+  serviceCharge Decimal  @db.Decimal(18, 2)
+  paidAt        DateTime @default(now())
 
-  customers customers @relation(fields: [customerId], references: [id])
-  outlets   outlets   @relation(fields: [outletId], references: [id])
-  tables    tables?   @relation(fields: [tableId], references: [id])
+  customerId String?
+  outletId   String?
 
-  order_items order_items[]
+  // RELATION
+  items       transaction_items[] @relation("TransactionItems")
+  outlets     outlets?            @relation(fields: [outletsId], references: [id])
+  outletsId   String?             @db.Uuid
+  tables      tables?             @relation(fields: [tableId], references: [id])
+  tableId    String?             @db.Uuid
+  customers   customers?          @relation(fields: [customersId], references: [id])
+  customersId String?             @db.Uuid
+}
+
+model transaction_items {
+  id       String  @id @default(uuid()) @db.Uuid
+  menuName String
+  qty      Int
+  price    Decimal @db.Decimal(18, 2)
+  subtotal Decimal @db.Decimal(18, 2)
+
+  // RELATION
+  transaction   transactions @relation("TransactionItems", fields: [transactionId], references: [id])
+  transactionId String       @db.Uuid
 }
 
 model order_items {
-  id            String  @id @default(uuid()) @db.Uuid
-  transactionId String  @db.Uuid
-  menuId        String  @db.Uuid
-  qty           Int
-  price         Decimal @db.Decimal(18, 2)
-  subtotal      Decimal @db.Decimal(18, 2)
+  id       String  @id @default(uuid()) @db.Uuid
+  qty      Int
+  price    Decimal @db.Decimal(18, 2)
+  subtotal Decimal @db.Decimal(18, 2)
 
-  transactions transactions @relation(fields: [transactionId], references: [id], onDelete: Cascade)
-  menu_items   menu_items   @relation(fields: [menuId], references: [id])
+  orders  orders @relation(fields: [orderId], references: [id])
+  orderId String @db.Uuid
+
+  menuItems menu_items @relation(fields: [menuId], references: [id])
+  menuId    String     @db.Uuid
+}
+
+model orders {
+  id            String    @id @default(uuid()) @db.Uuid
+  billNumber    String    @unique
+  orderType     String
+  guests        Int
+  total         Decimal   @default(0.00) @db.Decimal(18, 2)
+  tax           Decimal   @default(0.00) @db.Decimal(18, 2)
+  serviceCharge Decimal   @default(0.00) @db.Decimal(18, 2)
+  totalPayment  Decimal   @default(0.00) @db.Decimal(18, 2)
+  orderStatus   String    @default("PENDING")
+  orderDate     DateTime  @default(now())
+  deletedAt     DateTime?
+
+  customers  customers @relation(fields: [customerId], references: [id])
+  customerId String    @db.Uuid
+
+  outlets  outlets @relation(fields: [outletId], references: [id])
+  outletId String  @db.Uuid
+
+  tables  tables? @relation(fields: [tableId], references: [id])
+  tableId String? @db.Uuid
+
+  orderItems order_items[]
 }
 
 model customers {
-  id            String   @id @default(uuid()) @db.Uuid
-  billNumber    String   @unique
+  id            String    @id @default(uuid()) @db.Uuid
+  billNumber    String    @unique
   customerName  String
+  orderType     String?
   phone         String?
   guests        Int?
-  total         Decimal  @default(0.00) @db.Decimal(18, 2)
-  tax           Decimal  @default(0.00) @db.Decimal(18, 2)
-  serviceCharge Decimal  @default(0.00) @db.Decimal(18, 2)
-  grandTotal    Decimal  @default(0.00) @db.Decimal(18, 2)
-  status        String   @default("PENDING") // PENDING / PAID / CANCELLED
-  createdAt     DateTime @default(now())
+  outletId      String    @db.Uuid
+  outlets       outlets   @relation(fields: [outletId], references: [id])
+  total         Decimal   @default(0.00) @db.Decimal(18, 2)
+  tax           Decimal   @default(0.00) @db.Decimal(18, 2)
+  serviceCharge Decimal   @default(0.00) @db.Decimal(18, 2)
+  grandTotal    Decimal   @default(0.00) @db.Decimal(18, 2)
+  status        String    @default("PENDING") // PENDING / PAID / CANCELLED
+  createdAt     DateTime  @default(now())
   paidAt        DateTime? @db.Timestamp(6)
 
   transactions transactions[]
   payment_logs payment_logs[]
+  orders       orders[]
 }
 
 model payment_logs {

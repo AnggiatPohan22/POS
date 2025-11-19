@@ -1,20 +1,20 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { useSelector } from "react-redux";
 import { formatDate, getAvatarName } from "../../utils";
 
 const CustomerInfo = () => {
-  const [dateTime, setDateTime] = useState(new Date());
   const customerData = useSelector((state) => state.customer);
+  const order = useSelector((state) => state.order);
 
-  // Auto-update waktu tiap menit
-  useEffect(() => {
-    const timer = setInterval(() => setDateTime(new Date()), 60000);
-    return () => clearInterval(timer);
-  }, []);
+  // Ambil orderDate dari backend & format
+  const formattedDate = order.orderDate
+    ? formatDate(new Date(order.orderDate))
+    : "Order Date";
 
   return (
     <div className="flex items-center justify-between px-4 py-3 bg-[#1f1f1f] rounded-lg shadow-md">
-      {/* Info Customer */}
+
+      {/* INFO CUSTOMER */}
       <div className="flex flex-col items-start">
         <h1 className="text-md text-[#f5f5f5] font-semibold tracking-wide">
           {customerData.name || "Customer Name"}
@@ -22,7 +22,7 @@ const CustomerInfo = () => {
 
         <div className="flex items-center gap-2 mt-1">
           <p className="text-xs text-[#ababab] font-medium">
-            #{customerData.billNo || "No Bill"}
+            #{order.billNumber || "No Bill"}
           </p>
           <p className="text-xs text-[#ababab] font-medium">|</p>
           <p className="text-xs text-[#ababab] font-medium">
@@ -31,14 +31,15 @@ const CustomerInfo = () => {
         </div>
 
         <p className="text-xs text-[#ababab] font-medium mt-2">
-          {formatDate(dateTime)}
+          {formattedDate}
         </p>
       </div>
 
-      {/* Avatar */}
+      {/* AVATAR */}
       <button className="bg-[#f6b100] p-3 text-xl font-bold rounded-lg text-[#1f1f1f]">
-        {getAvatarName(customerData.name) || "CN"}
+        {getAvatarName(customerData.name)}
       </button>
+
     </div>
   );
 };

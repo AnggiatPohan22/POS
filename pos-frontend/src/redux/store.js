@@ -1,25 +1,34 @@
-import { configureStore } from "@reduxjs/toolkit";
-import customerSlice from "./slices/customerSlices"
+import { configureStore, combineReducers } from "@reduxjs/toolkit";
+import { persistStore, persistReducer } from "redux-persist";
+import storage from "redux-persist/lib/storage";
+
 import carSlice from "./slices/cartSlices";
 import userSlice from "./slices/userSlice";
 import customerReducer from "./slices/customerSlices";
 import tableReducer from "./slices/tableSlices";
-import outletSlice from "./slices/outletSlice";
+import outletSlice from "./slices/outletSlices";
+import orderReducer from "./slices/orderSlices";
 
+const persistConfig = {
+  key: "root",
+  storage,
+  whitelist: ["customer", "order"], // hanya data aktif yang disimpan
+};
 
-// File ini di buat setelah instalasi Redux-React
-const store = configureStore({
-    reducer: {
-        customer : customerReducer, //memanggil isi konten file customerSlice.js
-        cart : carSlice,
-        user : userSlice,
-        table : tableReducer,
-        outlet : outletSlice,
-    },
-    
-    // code ini untuk melihat data di redux store
-    // jangan lupa install extension Redux DevTools di browser
-    devTools: true,
+const rootReducer = combineReducers({
+  customer: customerReducer,
+  order: orderReducer,
+  table: tableReducer,
+  outlet: outletSlice,
+  cart: carSlice,
+  user: userSlice,
 });
 
-export default store;
+const persistedReducer = persistReducer(persistConfig, rootReducer);
+
+export const store = configureStore({
+  reducer: persistedReducer,
+  devTools: true,
+});
+
+export const persistor = persistStore(store);

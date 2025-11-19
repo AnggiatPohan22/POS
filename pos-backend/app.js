@@ -18,6 +18,7 @@ import outletRoute from "./routes/outletRoute.js";
 import customerRoutes from "./routes/customerRoute.js";
 import transactionRoutes from "./routes/transactionRoute.js";
 import orderItemRoutes from "./routes/orderItemRoute.js";
+import menuRoutes from  "./routes/menuRoute.js";
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -53,6 +54,8 @@ app.use("/api/outlet", outletRoute);
 app.use("/api/customers", customerRoutes);
 app.use("/api/transactions", transactionRoutes);
 app.use("/api/order-items", orderItemRoutes);
+app.use("/api/menu-categories", menuRoutes);
+console.log("📌 menuRoutes loaded!");
 
 // Error Handler
 app.use((error, req, res, next) => {

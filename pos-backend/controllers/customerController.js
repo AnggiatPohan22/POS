@@ -13,6 +13,15 @@ export const createCustomer = async (req, res, next) => {
     if (!outletId) return next(createHttpError(400, "outletId is required"));
     if (!orderType) return next(createHttpError(400, "orderType is required"));
 
+    // 🔍 pastikan outlet valid
+    const outlet = await prisma.outlets.findUnique({
+      where: { id: outletId },
+    });
+    if (!outlet) {
+      return next(createHttpError(400, "Invalid outletId"));
+    }
+
+    // 🔢 generate bill dari helper (pake outlet & orderType)
     const billNumber = await generateBillNumber(outletId, orderType);
 
     const customer = await prisma.customers.create({
@@ -21,8 +30,13 @@ export const createCustomer = async (req, res, next) => {
         customerName,
         phone: phone || null,
         guests: guests ? Number(guests) : null,
-        // outletId tidak ada di model customers (sesuai schema kamu),
-        // jadi info outlet diwakili di transactions
+        outletId,
+        orderType,
+        status: "PENDING",
+        total: 0,
+        tax: 0,
+        serviceCharge: 0,
+        grandTotal: 0,
       },
     });
 
@@ -64,9 +78,9 @@ export const getCustomerById = async (req, res, next) => {
       where: { id },
       include: {
         transactions: {
-          include: { outlets: true, tables: true, order_items: true }
+          include: { outlets: true, tables: true, order_items: true, outlets: true }
         },
-        payment_logs: true,
+        payment_logs: true, 
       },
     });
 

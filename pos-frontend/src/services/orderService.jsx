@@ -1,24 +1,18 @@
 // src/services/orderService.jsx
 import axios from "axios";
-import store from "../redux/store";
+import {store} from "../redux/store";
 
-// Create Order
-export const createOrder = async (payload) => {
-  console.log("🚀 CreateOrder Payload:", payload);
+// ➕ update existing order (items, total, etc)
+export const updateOrder = async (orderId, payload) => {
   try {
-    const res = await fetch("http://localhost:8000/api/order", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify(payload),
-    });
-
-    return await res.json();
-  } catch (error) {
-    console.error("❌ createOrder Frontend Error:", error);
-    return { success: false, message: "Create order failed" };
+    const res = await axios.put(`http://localhost:8000/api/order/${orderId}`, payload);
+    return res.data;
+  } catch (err) {
+    console.error("❌ updateOrder error:", err.response?.data || err.message);
+    return { success: false, message: "Failed to update order" };
   }
 };
+
 
 
 // Update Order Status (PAID / COMPLETED / dll)

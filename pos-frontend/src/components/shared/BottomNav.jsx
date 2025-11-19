@@ -1,226 +1,77 @@
-import React, { useState, useEffect } from 'react';
-import { FaHome } from 'react-icons/fa';
-import { MdOutlineReorder, MdTableBar } from 'react-icons/md';
-import { CiCircleMore } from 'react-icons/ci';  
-import { BiSolidDish } from 'react-icons/bi';
-import { useNavigate, useLocation } from 'react-router-dom';
-import Modal from './Modal';
-import { useDispatch } from "react-redux";
-import { setCustomerInfo } from "../../redux/slices/customerSlices.js";
-import { setOutlet } from '../../redux/slices/outletSlice.js';
+import React, { useState } from "react";
+import { FaHome } from "react-icons/fa";
+import { MdOutlineReorder, MdTableBar } from "react-icons/md";
+import { CiCircleMore } from "react-icons/ci";
+import { BiSolidDish } from "react-icons/bi";
+import { useNavigate, useLocation } from "react-router-dom";
 
+// Modal baru untuk Create Order
+import CreateOrderModal from "../../components/orders/createOrderModal.jsx";
 
 const BottomNav = () => {
-    const navigate = useNavigate();
-    const [isModalOpen, setIsModalOpen] = React.useState(false);
-    const [guestCount, setGuestCount] = React.useState(1);
-    const openModal = () => setIsModalOpen(true);
-    const closeModal = () => setIsModalOpen(false);
-    const location = useLocation();
-    const dispatch = useDispatch();
-    const [name, setName] = useState("");
-    const [phone, setPhone] = useState("");
-    const [orderType, setOrderType] = useState("Dine-In");
+  const navigate = useNavigate();
+  const location = useLocation();
 
-    // Function untuk inc di Modal Order
-    const increment = () => {
-        if(guestCount >= 6) return;
-        setGuestCount((prev) => prev + 1);
-    }
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const openModal = () => setIsModalOpen(true);
+  const closeModal = () => setIsModalOpen(false);
 
-    // Function untuk dec di Modal Order
-    const decrement = () => {
-        if(guestCount <= 1) return;
-        setGuestCount((prev) => prev - 1);
-    }
+  const isActive = (path) => location.pathname === path;
 
-    // Function untuk setiap Navbar yang aktif
-    const isActive = (path) => location.pathname === path;
-
-    // Function button Create Order pada Modal
-    const handleCreateOrder = () => {
-    if (!name.trim()) return alert("Please enter customer name!");
-    if (!phone.trim()) return alert("Please enter phone number!");
-    if (!selectedOutlet) return alert("Please select outlet!");
-
-    // Kirim data customer ke Redux Store
-    dispatch(setCustomerInfo({
-        name,
-        phone,
-        guests: guestCount,
-        orderType
-    }));
-
-    // Kirim outlet ke Redux Store
-    dispatch(setOutlet(selectedOutlet)); // ⬅ tambah ini untuk kirim outlet ke Redux
-    console.log("🟢 Outlet Set:", selectedOutlet);
-
-    // Reset form setelah submit
-    setName("");
-    setPhone("");
-    setGuestCount(1);
-    setOrderType("Dine-In");
-    setSelectedOutlet("");
+  // 🔥 Action setelah submit modal (sementara tanpa backend)
+  const handleCreateOrder = (data) => {
+    console.log("📌 Data dari Modal:", data);
 
     closeModal();
 
-    // 🔥 IF TAKE-AWAY → langsung ke MENU!
-    if (orderType === "Take-Away") {
-        return navigate("/menu");
+    if (data.orderType === "Take-Away") {
+      navigate("/menu");
+    } else {
+      navigate("/tables");
     }
+  };
 
-    // 🔥 IF DINE-IN → ke TABLES!
-    navigate('/tables');
-    };
+  return (
+    <div className="fixed bottom-0 left-0 right-0 bg-[#262626] p-2 h-16 flex justify-around">
 
+      {/* Navbar Buttons */}
+      <button onClick={() => navigate("/")} className={`flex items-center justify-center font-bold ${isActive("/") ? "text-[#f5f5f5] bg-[#343434]" : "text-[#ababab]"} w-[200px] rounded-[20px]`}>
+        <FaHome className="inline mr-2" size={20} />
+        <p>Home</p>
+      </button>
 
-    const [selectedOutlet, setSelectedOutlet] = useState("");
-    const [outlets, setOutlets] = useState([]);
+      <button onClick={() => navigate("/orders")} className={`flex items-center justify-center font-bold ${isActive("/orders") ? "text-[#f5f5f5] bg-[#343434]" : "text-[#ababab]"} w-[200px] rounded-[20px]`}>
+        <MdOutlineReorder className="inline mr-2" size={20} />
+        <p>Orders</p>
+      </button>
 
-    useEffect(() => {
-    if (isModalOpen) {
-        fetchOutlets();
-    }
-    }, [isModalOpen]);
+      <button onClick={() => navigate("/tables")} className={`flex items-center justify-center font-bold ${isActive("/tables") ? "text-[#f5f5f5] bg-[#343434]" : "text-[#ababab]"} w-[200px] rounded-[20px]`}>
+        <MdTableBar className="inline mr-2" size={20} />
+        <p>Tables</p>
+      </button>
 
-    const fetchOutlets = async () => {
-    const res = await fetch("http://localhost:8000/api/outlet");
-    const data = await res.json();
-    if (data.success) setOutlets(data.data);
-    };
+      <button className={`flex items-center justify-center font-bold ${isActive("/more") ? "text-[#f5f5f5] bg-[#343434]" : "text-[#ababab]"} w-[200px] rounded-[20px]`}>
+        <CiCircleMore className="inline mr-2" size={20} />
+        <p>More</p>
+      </button>
 
+      {/* Floating Create Order Button */}
+      <button
+        disabled={isActive("/tables") || isActive("/menu")}
+        onClick={openModal}
+        className="absolute bottom-6 bg-[#3739dd] text-[#f5f5f5] rounded-full p-3 "
+      >
+        <BiSolidDish size={35} />
+      </button>
 
-
-    return (
-        <div className="fixed bottom-0 left-0 right-0 bg-[#262626] p-2 h-16 flex justify-around ">
-            {/* BUTTON NAVBAR */}
-            <button 
-                onClick={() => navigate('/')} 
-                className={`flex items-center justify-center font-bold ${isActive("/") ? "text-[#f5f5f5] bg-[#343434]"
-                    : "text-[#ababab]"} w-[200px] rounded-[20px]`}>
-                <FaHome className="inline mr-2" size={20}/>
-                <p>Home</p>
-            </button>
-            <button 
-                onClick={() => navigate('/orders')} 
-                className={`flex items-center justify-center font-bold ${isActive("/orders") ? "text-[#f5f5f5] bg-[#343434]"
-                    : "text-[#ababab]"} w-[200px] rounded-[20px]`}>
-                <MdOutlineReorder className="inline mr-2" size={20}/>
-                <p>Orders</p>
-            </button>
-            <button 
-                onClick={() => navigate('/tables')} 
-                className={`flex items-center justify-center font-bold ${isActive("/tables") ? "text-[#f5f5f5] bg-[#343434]"
-                    : "text-[#ababab]"} w-[200px] rounded-[20px]`}>
-                <MdTableBar className="inline mr-2" size={20}/>
-                <p>Tables</p>
-            </button>
-            <button 
-                className={`flex items-center justify-center font-bold ${isActive("/more") ? "text-[#f5f5f5] bg-[#343434]"
-                    : "text-[#ababab]"} w-[200px] rounded-[20px]`}>
-                <CiCircleMore className="inline mr-2" size={20}/>
-                <p>More</p>
-            </button>
-            {/* END BUTTON NAVBAR */}
-            
-            {/* Modal Create Order */}
-            <button
-                disabled={isActive("/tables") || isActive("/menu")}
-                onClick={openModal}
-                className='absolute bottom-6 bg-[#F6B100] text-[#f5f5f5] rounded-full p-3 items-center'>
-                <BiSolidDish size={30} />
-            </button>
-            
-            <Modal isOpen={isModalOpen} onClose={closeModal} title="Create Order">
-                <div>
-                    <label className='block text-[#ababab] mb-2 text-sm font-meidum'> Customer Name</label>
-                    <div className='flex item-center rounded-lg p-3 px-4 bg-[#1f1f1f]'>
-                        <input 
-                            value={name} 
-                            onChange={(e) => setName(e.target.value)} 
-                            type="text" 
-                            placeholder='Enter customer name' 
-                            className='bg-transparent flex-1 text-white focus:outline-none' 
-                        />
-                    </div>
-                </div>
-
-                <div>
-                    <label className='block text-[#ababab] mb-2 mt-3 text-sm font-meidum'> Customer Phone</label>
-                    <div className='flex item-center rounded-lg p-3 px-4 bg-[#1f1f1f]'>
-                        <input 
-                            value={phone} 
-                            onChange={(e) => setPhone(e.target.value)} 
-                            type="text" 
-                            placeholder='Enter customer phone' 
-                            className='bg-transparent flex-1 text-white focus:outline-none' 
-                        />
-                    </div>
-                </div>
-                
-                {/* Order Type */}
-                <div className='mt-3'>
-                    <label className='block mb-2 text-sm font-medium text-[#ababab]'>
-                        Order Type
-                    </label>
-                    <div className='flex items-center gap-6 bg-[#1f1f1f] rounded-lg p-3 px-4'>
-                        <label className='flex items-center gap-2 cursor-pointer'>
-                            <input
-                                type='radio'
-                                name='orderType'
-                                value='Dine-In'
-                                checked={orderType === 'Dine-In'}
-                                onChange={(e) => setOrderType(e.target.value)}
-                                className='accent-yellow-500'
-                            />
-                            <span className='text-white'>Dine In</span>
-                        </label>
-                        <label className='flex items-center gap-2 cursor-pointer'>
-                            <input
-                                type='radio'
-                                name='orderType'
-                                value='Take-Away'
-                                checked={orderType === 'Take-Away'}
-                                onChange={(e) => setOrderType(e.target.value)}
-                                className='accent-yellow-500'
-                            />
-                            <span className='text-white'>Take Away</span>
-                        </label>
-                    </div>
-                </div>
-                <div>
-                    <label className="text-sm text-[#ababab] mt-2 block">Select Outlet</label>
-                    <select
-                    value={selectedOutlet}
-                    onChange={(e) => setSelectedOutlet(e.target.value)}
-                    className="w-full bg-[#1f1f1f] text-[#f5f5f5] p-3 rounded-lg border border-[#383838] mt-1"
-                    >
-                    <option value="">-- Select Outlet --</option>
-                    {outlets.map((outlet) => (
-                        <option key={outlet._id} value={outlet._id}>
-                        {outlet.name}
-                        </option>
-                    ))}
-                    </select>
-                </div>
-                <div>
-                    <label className='block mb-2 mt-3 text-sm font-medium text-[#ababab]'>Guest</label>
-                    <div className='flex item-center justify-between bg-[#1f1f1f] rounded-lg p-3 px-4 py-3 rounded-lg'>
-                        <button onClick={decrement} className='text-yellow-500 text-2xl'>&minus;</button>
-                        <span className='text-white'>{guestCount} Person</span>
-                        <button onClick={increment} className='text-yellow-500 text-2xl'>&#43;</button>
-                    </div>
-                </div>
-                
-                <button 
-                    onClick={handleCreateOrder} 
-                    className='w-full bg-[#f6b100] text-[#1f1f1f] font-semibold rounded-lg py-3 mt-8 hover:bg-[#e6a500] transition-colors'>
-                    Continue to Table Selection
-                </button>
-            </Modal>
-            {/* END Modal Create Order */}
-        </div>
-    );
+      {/* Modal Baru */}
+      <CreateOrderModal
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        onSubmit={handleCreateOrder}
+      />
+    </div>
+  );
 };
 
 export default BottomNav;

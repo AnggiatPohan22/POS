@@ -60,6 +60,7 @@ CREATE TABLE "outlets" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "name" TEXT NOT NULL,
     "code" TEXT,
+    "timezone" TEXT NOT NULL DEFAULT 'Asia/Makassar',
     "isActive" BOOLEAN,
 
     CONSTRAINT "outlets_pkey" PRIMARY KEY ("id")
@@ -106,11 +107,12 @@ CREATE TABLE "transactions" (
 -- CreateTable
 CREATE TABLE "order_items" (
     "id" UUID NOT NULL,
-    "transactionId" UUID NOT NULL,
-    "menuId" UUID NOT NULL,
     "qty" INTEGER NOT NULL,
     "price" DECIMAL(18,2) NOT NULL,
     "subtotal" DECIMAL(18,2) NOT NULL,
+    "orderId" UUID NOT NULL,
+    "menuId" UUID NOT NULL,
+    "transactionsId" UUID,
 
     CONSTRAINT "order_items_pkey" PRIMARY KEY ("id")
 );
@@ -120,14 +122,17 @@ CREATE TABLE "customers" (
     "id" UUID NOT NULL,
     "billNumber" TEXT NOT NULL,
     "customerName" TEXT NOT NULL,
+    "orderType" TEXT,
     "phone" TEXT,
     "guests" INTEGER,
+    "outletId" UUID NOT NULL,
     "total" DECIMAL(18,2) NOT NULL DEFAULT 0.00,
     "tax" DECIMAL(18,2) NOT NULL DEFAULT 0.00,
     "serviceCharge" DECIMAL(18,2) NOT NULL DEFAULT 0.00,
     "grandTotal" DECIMAL(18,2) NOT NULL DEFAULT 0.00,
     "status" TEXT NOT NULL DEFAULT 'PENDING',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "paidAt" TIMESTAMP(6),
 
     CONSTRAINT "customers_pkey" PRIMARY KEY ("id")
 );
@@ -143,6 +148,26 @@ CREATE TABLE "payment_logs" (
     CONSTRAINT "payment_logs_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "orders" (
+    "id" UUID NOT NULL,
+    "billNumber" TEXT NOT NULL,
+    "orderType" TEXT NOT NULL,
+    "guests" INTEGER NOT NULL,
+    "total" DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+    "tax" DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+    "serviceCharge" DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+    "totalPayment" DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+    "orderStatus" TEXT NOT NULL DEFAULT 'PENDING',
+    "orderDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "deletedAt" TIMESTAMP(3),
+    "customerId" UUID NOT NULL,
+    "outletId" UUID NOT NULL,
+    "tableId" UUID,
+
+    CONSTRAINT "orders_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "menu_categories_slug_key" ON "menu_categories"("slug");
 
@@ -151,6 +176,9 @@ CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "customers_billNumber_key" ON "customers"("billNumber");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "orders_billNumber_key" ON "orders"("billNumber");
 
 -- AddForeignKey
 ALTER TABLE "menu_item_outlets" ADD CONSTRAINT "menu_item_outlets_itemId_fkey" FOREIGN KEY ("itemId") REFERENCES "menu_items"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -177,10 +205,25 @@ ALTER TABLE "transactions" ADD CONSTRAINT "transactions_outletId_fkey" FOREIGN K
 ALTER TABLE "transactions" ADD CONSTRAINT "transactions_tableId_fkey" FOREIGN KEY ("tableId") REFERENCES "tables"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "order_items" ADD CONSTRAINT "order_items_transactionId_fkey" FOREIGN KEY ("transactionId") REFERENCES "transactions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "order_items" ADD CONSTRAINT "order_items_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "orders"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "order_items" ADD CONSTRAINT "order_items_menuId_fkey" FOREIGN KEY ("menuId") REFERENCES "menu_items"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "order_items" ADD CONSTRAINT "order_items_transactionsId_fkey" FOREIGN KEY ("transactionsId") REFERENCES "transactions"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "customers" ADD CONSTRAINT "customers_outletId_fkey" FOREIGN KEY ("outletId") REFERENCES "outlets"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "payment_logs" ADD CONSTRAINT "payment_logs_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "customers"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "orders" ADD CONSTRAINT "orders_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "customers"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "orders" ADD CONSTRAINT "orders_outletId_fkey" FOREIGN KEY ("outletId") REFERENCES "outlets"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "orders" ADD CONSTRAINT "orders_tableId_fkey" FOREIGN KEY ("tableId") REFERENCES "tables"("id") ON DELETE SET NULL ON UPDATE CASCADE;

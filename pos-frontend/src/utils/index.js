@@ -54,3 +54,17 @@ export const formatDateAndTime = (date) => {
 
   return dateAndTime;
 }
+
+// Function Currency
+export const formatCurrency = (value = 0) => {
+  try {
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
+    }).format(Number(value));
+  } catch (error) {
+    console.error("❌ formatCurrency error:", error);
+    return "IDR 0";
+  }
+};

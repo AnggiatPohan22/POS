@@ -1,127 +1,160 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import BottomNav from "../components/shared/BottomNav";
 import BackButton from "../components/shared/BackButton";
 import TableCards from "../components/tables/TableCards";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { getTables } from "../https";
+import axios from "axios";
 import { enqueueSnackbar } from "notistack";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { setCustomerInfo } from "../redux/slices/customerSlices";
+import { setCurrentOrder } from "../redux/slices/orderSlices";
+
+// API untuk mendapatkan semua meja + status occupied
+const API_URL = "http://localhost:8000/api/table/with-status";
 
 const Tables = () => {
-  // Title Page
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  const reduxCustomer = useSelector((state) => state.customer);
+
+  const [tables, setTables] = useState([]);
+  const customerId = searchParams.get("customerId");
+
+  /* 🔍 Saat pertama masuk ke halaman Tables
+     Fungsi:
+     - Cek ada customerId dari URL (dibawa dari Home/Order Page)
+     - Jika refresh halaman, restore customer dari backend
+  */
   useEffect(() => {
-    document.title = "Aruma Restaurant | Tables";
+    console.group("🚀 TABLES PAGE LOADED");
+    console.log("🧠 REDUX CUSTOMER:", reduxCustomer);
+    console.log("🔗 URL customerId:", customerId);
+    console.groupEnd();
+
+    if (!customerId) {
+      enqueueSnackbar("Customer ID missing", { variant: "warning" });
+      return navigate("/");
+    }
+
+    restoreCustomer();
+    fetchTables();
   }, []);
 
-  const [status, setStatus] = React.useState("all");
+  /* 📌 Ambil list meja dari backend */
+  const fetchTables = async () => {
+    try {
+      const res = await axios.get(API_URL);
+      console.log("📌 TABLE LIST:", res.data.data);
+      setTables(res.data.data || []);
+    } catch {
+      enqueueSnackbar("Failed fetching tables", { variant: "error" });
+    }
+  };
 
-  const {
-    data: tables = [],
-    isError,
-  } = useQuery({
-    queryKey: ["tables"],
-    queryFn: getTables,
+  /* 🔁 Restore customer dari backend apabila hilang dari Redux */
+  const restoreCustomer = async () => {
+    if (reduxCustomer.customerId) return;
 
-    // ✅ Ensure that we consistently return the ARRAY from backend
-    select: (res) => {
-      if (!res?.data) return [];              // fallback
-      if (Array.isArray(res.data)) return res.data;  // backend return array
-      if (Array.isArray(res.data.data)) return res.data.data; // backend return {data: []}
-      return []; // fallback untuk kasus lain
-    },
+    try {
+      const res = await axios.get(
+        `http://localhost:8000/api/customers/${customerId}`
+      );
 
-    placeholderData: keepPreviousData,
-  });
+      const c = res.data.data;
 
-  if (isError) {
-    enqueueSnackbar("Something went wrong!", { variant: "error" });
-  }
+      dispatch(
+        setCustomerInfo({
+          customerId: c.id,
+          name: c.customerName,
+          phone: c.phone,
+          guests: c.guests,
+          orderType: c.orderType,
+          outletId: c.outletId,
+        })
+      );
+      console.log("🎯 Customer restored");
+    } catch {
+      enqueueSnackbar("❌ Session expired, please re-enter", {
+        variant: "error",
+      });
+      navigate("/");
+    }
+  };
 
-  // ✅ Safe sorting (hindari error kalau tableNo string)
+  /* 🖱 Klik meja → Buat Order baru
+     Fungsi:
+     - Simpan order ke DB
+     - Simpan detail order ke Redux
+     - Redirect ke Menu page
+  */
+  const handleSelectTable = async (table) => {
+    console.group("🪑 SELECTING TABLE");
+    console.log("Table chosen:", table);
+    console.log("Customer:", reduxCustomer);
+    console.groupEnd();
+
+    const payload = {
+      customerId: reduxCustomer.customerId,
+      orderType: reduxCustomer.orderType,
+      outletId: reduxCustomer.outletId,
+      tableId: table.id,
+      customerName: reduxCustomer.name,
+      customerPhone: reduxCustomer.phone,
+      guests: reduxCustomer.guests
+    };
+
+    try {
+      const res = await axios.post("http://localhost:8000/api/order", payload);
+      const order = res.data.data;
+
+      console.log("🧾 ORDER CREATED:", order);
+
+      dispatch(
+        setCurrentOrder({
+          id: order.id, // ⬅ UUID string
+          tableId: table.id,
+          tableNo: table.tableNo,
+          billNumber: order.billNumber,
+          orderDate: order.orderDate
+        })
+      );
+
+
+      console.log("📍 Navigate to MENU →", order.id);
+      navigate(`/menu?orderId=${order.id}`);
+
+    } catch (err) {
+      console.error("❌ Create order failed", err);
+      enqueueSnackbar("Failed creating order", { variant: "error" });
+    }
+  };
+
+  // Sort meja berdasarkan nomor meja (lebih rapi)
   const sortedTables = [...tables].sort(
     (a, b) => Number(a.tableNo) - Number(b.tableNo)
   );
 
-  // ---------------- CONFIRM ORDER ONLY ----------------
-const handleConfirmOrder = async () => {
-  if (!validateData()) return;
-  if (!user?._id) return enqueueSnackbar("Login required!", { variant: "warning" });
-
-  try {
-    setIsLoading(true);
-
-    const result = await createOrder({
-      customer,
-      cartData,
-      total,
-      tax,
-      totalWithTax,
-      tableId: selectedTable?.id,
-      status: "PENDING",
-    });
-
-    if (!result.success) {
-      enqueueSnackbar("Failed to process order", { variant: "error" });
-      return;
-    }
-
-    setPendingOrderId(result.data._id);
-    setPaymentModalOpen(true);
-
-    enqueueSnackbar("Order created! Select payment method", { variant: "info" });
-
-  } catch (err) {
-    console.error(err);
-    enqueueSnackbar("System error!", { variant: "error" });
-  } finally {
-    setIsLoading(false);
-  }
-};
-
-
-  // ✅ Filter Table (All / DINE-IN)
-  const filteredTables =
-    status === "Dine-in"
-      ? sortedTables.filter((t) => t.currentOrder) // 🔥 Dine-in kalau ada order aktif
-      : sortedTables;
-
   return (
-    <section className="bg-[#1f1f1f] h-[calc(100vh)] overflow-hidden">
-      <div className="flex items-center justify-between px-10 py-2">
-        <div className="flex items-center gap-4">
-          <BackButton />
-          <h1 className="text-[#f5f5f5] text-2xl font-bold">Tables</h1>
-        </div>
-
-        <div className="flex items-center justify-around gap-4">
-          <button
-            onClick={() => setStatus("all")}
-            className={`text-[#ababab] text-lg px-5 py-2 rounded-lg ${
-              status === "all" ? "bg-[#383838]" : ""
-            }`}
-          >
-            All
-          </button>
-
-          <button
-            onClick={() => setStatus("Dine-in")}
-            className={`text-[#ababab] text-lg px-5 py-2 rounded-lg ${
-              status === "Dine-in" ? "bg-[#383838]" : ""
-            }`}
-          >
-            Dine-in
-          </button>
-        </div>
+    <section className="bg-[#1f1f1f] min-h-screen pb-20">
+      <div className="flex items-center gap-4 px-4 py-4">
+        <BackButton />
+        <h1 className="text-white text-2xl font-bold">Tables</h1>
       </div>
 
-      <div className="flex flex-wrap justify-center gap-4 px-10 mt-8 ">
-        {filteredTables.map((table) => (
+      {/* Menampilkan semua meja */}
+      <div className="flex flex-wrap justify-center gap-4 px-6">
+        {sortedTables.map((tables) => (
           <TableCards
-            key={table._id}
-            id={table._id}
-            name={`Table ${table.tableNo}`}
-            status={table.status}
-            initials={table.currentOrder?.customerDetails.name} // Placeholder, sesuaikan jika ada data nama pemesan
-            seat={table.seats}
+            key={tables.id}
+            id={tables.id}
+            tableNo={tables.tableNo}
+            seats={tables.seats}
+            initials={`T${tables.tableNo}`}
+            isBooked={!!tables.currentCustomer}
+            status={tables.currentCustomer ? "Occupied" : "Available"}
+            onSelect={() => handleSelectTable(tables)}
           />
         ))}
       </div>
